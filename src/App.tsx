@@ -25,16 +25,6 @@ import {
   Users,
   GlassWater
 } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
-
-// Initialize Gemini (will be used lazily)
-const getAi = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not defined");
-  }
-  return new GoogleGenAI({ apiKey });
-};
 
 // --- Animation Configs ---
 const fadeIn = (delay = 0) => ({
@@ -223,7 +213,7 @@ const ChatBot = () => {
     }
   }, [messages]);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim()) return;
     const userMsg = input.toLowerCase();
     const originalMsg = input;
@@ -231,12 +221,14 @@ const ChatBot = () => {
     setMessages(prev => [...prev, { role: "user", text: originalMsg }]);
     setIsLoading(true);
 
-    // Offline / Local Fallback Logic
     const localResponses: Record<string, string> = {
       date: "The wedding is on October 24, 2026.",
       when: "The ceremony starts at 1:00 PM, followed by the reception at 5:00 PM on October 24, 2026.",
+      time: "The ceremony starts at 1:00 PM, followed by the reception at 5:00 PM on October 24, 2026.",
+      schedule: "The ceremony starts at 1:00 PM, followed by the reception at 5:00 PM on October 24, 2026.",
       where: "The ceremony is at the National Shrine of Our Lady of Fatima, and the reception is at Casa de Aurora.",
       location: "Ceremony: National Shrine of Our Lady of Fatima (Valenzuela). Reception: Casa de Aurora.",
+      venue: "Ceremony: National Shrine of Our Lady of Fatima (Valenzuela). Reception: Casa de Aurora.",
       dress: "The dress code is Formal/Semi-formal. Our palette includes Blush Pink, Dusty Rose, Sky Blue, Steel Blue, and Navy Blue.",
       wear: "We suggest Formal or Semi-formal attire in Blush Pink, Dusty Rose, Sky Blue, Steel Blue, or Navy Blue.",
       gift: "Your presence is our best gift! If you'd like to honor us with a contribution, monetary gifts are appreciated as we start our home.",
@@ -244,49 +236,20 @@ const ChatBot = () => {
       parking: "Yes, ample parking is available at both the church and the reception hall.",
       rsvp: "You can RSVP using the form in the RSVP section of this site by October 20th.",
       kids: "While we love children, our celebration will be an adults-only event.",
-      plus: "Due to limited seating, we can only accommodate guests named on the invitation."
+      children: "While we love children, our celebration will be an adults-only event.",
+      plus: "Due to limited seating, we can only accommodate guests named on the invitation.",
+      entourage: "You can scroll to the Entourage section to see the principal sponsors, best man, maid of honor, bridesmaids, groomsmen, and bearers."
     };
 
     const matchedKey = Object.keys(localResponses).find(key => userMsg.includes(key));
+    const reply =
+      (matchedKey && localResponses[matchedKey]) ||
+      "I can help with the date, time, venue, dress code, RSVP, parking, gifts, and entourage details. Try asking about one of those.";
 
-    if (matchedKey) {
-      setTimeout(() => {
-        setMessages(prev => [...prev, { role: "bot", text: localResponses[matchedKey] }]);
-        setIsLoading(false);
-      }, 500);
-      return;
-    }
-
-    try {
-      const ai = getAi();
-      const result = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: "user", parts: [{ text: userMsg }] }],
-        config: {
-          systemInstruction: `You are an elegant wedding concierge for Jetro and Monica's wedding. 
-          Theme: Navy Blue and Pink. 
-          Date: October 24, 2026. 
-          Ceremony: 1:00 PM at National Shrine of Our Lady of Fatima. 
-          Dress Code: Formal/Semi-formal (Blush Pink, Dusty Rose, Sky Blue, Steel Blue, Navy Blue).
-          Note on Gifts: Monetary gifts are appreciated.
-          Unplugged Ceremony: No phones during the service.
-          Hashtag: #JetroMonica.
-          FAQ: Parking is available at both venues. Arrival suggested at 12:30 PM. No kids (adults-only). No plus-ones unless named. 
-          Tone: Very polite, warm, and romantic. Keep answers helpful and brief.`
-        }
-      });
-      
-      const botResponse = result.text || "I'm here to help, but having trouble finding the right words. Could you ask again?";
-      setMessages(prev => [...prev, { role: "bot", text: botResponse }]);
-    } catch (error) {
-      console.error("ChatBot error:", error);
-      const errorMsg = error instanceof Error && error.message.includes("GEMINI_API_KEY") 
-        ? "The wedding concierge is currently unavailable (API Key missing). Please check your configuration."
-        : "My connection seems a bit fluttery. Please try again in a moment.";
-      setMessages(prev => [...prev, { role: "bot", text: errorMsg }]);
-    } finally {
+    window.setTimeout(() => {
+      setMessages(prev => [...prev, { role: "bot", text: reply }]);
       setIsLoading(false);
-    }
+    }, 350);
   };
 
   return (
@@ -1068,5 +1031,4 @@ export default function App() {
     </div>
   );
 }
-
 
